@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import torchvision
 import torch.nn.utils.spectral_norm as spectral_norm
 from models.networks.normalization import SPADE, ACE
-
+from models.networks.attention import Self_Attention
 
 # ResNet block that uses SPADE.
 # It differs from the ResNet block of pix2pixHD in that
@@ -164,14 +164,18 @@ class Zencoder(torch.nn.Module):
         ### downsample
         for i in range(n_downsampling):
             mult = 2**i
-            model += [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1),
-                      norm_layer(ngf * mult * 2), nn.LeakyReLU(0.2, False)]
+            in_dim = ngf * mult
+            out_dim = ngf * mult * 2
+            model += [nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1),
+                      norm_layer(ngf * mult * 2), nn.LeakyReLU(0.2, False), Self_Attention(out_dim)]
 
         ### upsample
         for i in range(1):
             mult = 2**(n_downsampling - i)
-            model += [nn.ConvTranspose2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1, output_padding=1),
-                       norm_layer(int(ngf * mult / 2)), nn.LeakyReLU(0.2, False)]
+            in_dim = ngf * mult
+            out_dim = ngf * mult * 2
+            model += [nn.ConvTranspose2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1, output_padding=1),
+                       norm_layer(int(ngf * mult / 2)), nn.LeakyReLU(0.2, False), Self_Attention(out_dim)]
 
         model += [nn.ReflectionPad2d(1), nn.Conv2d(256, output_nc, kernel_size=3, padding=0), nn.Tanh()]
         self.model = nn.Sequential(*model)
