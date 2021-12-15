@@ -55,7 +55,8 @@ class Pix2PixModel(torch.nn.Module):
             with torch.no_grad():
                 # fake_image, _ = self.generate_fake(input_semantics, real_image)
                 obj_dic = data['path']
-                fake_image = self.save_style_codes(input_semantics, real_image, obj_dic)
+                #fake_image = self.save_style_codes(input_semantics, real_image, obj_dic)
+                fake_image = self.netG(input_semantics, real_image, valids, obj_dic=obj_dic)
             return fake_image
         elif mode == 'UI_mode':
             with torch.no_grad():

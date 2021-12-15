@@ -175,7 +175,7 @@ class Zencoder(torch.nn.Module):
             in_dim = ngf * mult
             out_dim = ngf * mult * 2
             model += [nn.ConvTranspose2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1, output_padding=1),
-                       norm_layer(int(ngf * mult / 2)), nn.LeakyReLU(0.2, False), Self_Attention(out_dim)]
+                       norm_layer(int(ngf * mult / 2)), nn.LeakyReLU(0.2, False)]#, Self_Attention(out_dim)]
 
         model += [nn.ReflectionPad2d(1), nn.Conv2d(256, output_nc, kernel_size=3, padding=0), nn.Tanh()]
         self.model = nn.Sequential(*model)
