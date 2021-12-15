@@ -103,7 +103,7 @@ class Pix2PixModel(torch.nn.Module):
         netD = networks.define_D(opt) if opt.isTrain else None
         netE = networks.define_E(opt) if opt.use_vae else None
 
-        if not opt.isTrain or opt.continue_train:
+        if not opt.isTrain or opt.continue_train or opt.pretrained:
             netG = util.load_network(netG, 'G', opt.which_epoch, opt)
             if opt.isTrain:
                 netD = util.load_network(netD, 'D', opt.which_epoch, opt)

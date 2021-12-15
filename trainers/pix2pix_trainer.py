@@ -17,6 +17,9 @@ class Pix2PixTrainer():
     def __init__(self, opt):
         self.opt = opt
         self.pix2pix_model = Pix2PixModel(opt)
+        for name, module in self.pix2pix_model.named_modules():
+            if name == 'netG.Zencoder.model.':
+                module.requires_grad = False
         if len(opt.gpu_ids) > 0:
             self.pix2pix_model = DataParallelWithCallback(self.pix2pix_model,
                                                           device_ids=opt.gpu_ids)

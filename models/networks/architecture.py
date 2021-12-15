@@ -167,7 +167,7 @@ class Zencoder(torch.nn.Module):
             in_dim = ngf * mult
             out_dim = ngf * mult * 2
             model += [nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1),
-                      norm_layer(ngf * mult * 2), nn.LeakyReLU(0.2, False), Self_Attention(out_dim)]
+                      norm_layer(ngf * mult * 2), nn.LeakyReLU(0.2, False)]#, Self_Attention(out_dim)]
 
         ### upsample
         for i in range(1):
