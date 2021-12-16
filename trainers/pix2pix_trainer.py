@@ -5,7 +5,7 @@ Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses
 
 from models.networks.sync_batchnorm import DataParallelWithCallback
 from models.pix2pix_model import Pix2PixModel
-
+import torch.nn as nn
 
 class Pix2PixTrainer():
     """
@@ -18,8 +18,10 @@ class Pix2PixTrainer():
         self.opt = opt
         self.pix2pix_model = Pix2PixModel(opt)
         for name, module in self.pix2pix_model.named_modules():
-            if name == 'netG.Zencoder.model.':
-                module.requires_grad = False
+            if not (name.startswith('netG.Zencoder') or name.startswith('netD')): 
+                if hasattr(module, 'requires_grad_'):
+                    module.requires_grad_(False)
+                    #print(name)
         if len(opt.gpu_ids) > 0:
             self.pix2pix_model = DataParallelWithCallback(self.pix2pix_model,
                                                           device_ids=opt.gpu_ids)
