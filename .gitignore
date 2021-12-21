@@ -9,7 +9,7 @@ styles_test/style_codes/
 
 /datasets/
 
-
+*.pth
 __pycache__
 *.pyc
 

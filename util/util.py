@@ -201,16 +201,23 @@ def save_network(net, label, epoch, opt):
 
 
 def load_network(net, label, epoch, opt):
-    save_filename = '%s_net_%s.pth' % (epoch, label)
-    save_dir = os.path.join(opt.checkpoints_dir, opt.name)
-    save_path = os.path.join(save_dir, save_filename)
-    weights = torch.load(save_path)
-    print(f'weights are loaded from {save_path} for {label}')
-    if label == 'G':
-        weights.pop('Zencoder.model.1.weight') # original 3 channel but our is 4 channel
-        net.load_state_dict(weights, strict=False)
+    if (opt.pretrained == True):
+        save_filename = f'pretrained_{label}.pth'#'%s_net_%s.pth' % (epoch, label)
+        weights = torch.load(save_filename) # torch.load(save_path)
+        print(f'weights are loaded from {save_filename} for {label}')
+        if label == 'G':
+            weights.pop('Zencoder.model.1.weight') # original 3 channel but our is 4 channel
+            net.load_state_dict(weights, strict=False)
+        else:
+            net.load_state_dict(weights)
     else:
+        save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        save_filename = f'%s_net_%s.pth' % (epoch, label)
+        save_path = os.path.join(save_dir, save_filename)
+        weights = torch.load(save_path) # torch.load(save_path)
         net.load_state_dict(weights)
+        print(f'weights are loaded from {save_filename} for {label}')
+    
     return net
 
 

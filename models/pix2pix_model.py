@@ -4,6 +4,7 @@ Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses
 """
 
 import torch
+import torch.nn.functional as F
 import models.networks as networks
 import util.util as util
 
@@ -145,10 +146,10 @@ class Pix2PixModel(torch.nn.Module):
         fake_image = self.generate_fake(
             input_semantics, real_image, valids, compute_kld_loss=self.opt.use_vae)
 
-        final_image = real_image*valids + fake_image*(1-valids)
+        #final_image = real_image*valids + fake_image*(1-valids)
 
         pred_fake, pred_real = self.discriminate(
-            input_semantics, final_image, real_image)
+            input_semantics, fake_image, real_image)
 
         G_losses['GAN'] = self.criterionGAN(pred_fake, True,
                                             for_discriminator=False)
@@ -166,8 +167,9 @@ class Pix2PixModel(torch.nn.Module):
             G_losses['GAN_Feat'] = GAN_Feat_loss
 
         if not self.opt.no_vgg_loss:
-            G_losses['VGG'] = self.criterionVGG(fake_image*valids, real_image*valids) \
+            G_losses['VGG'] = self.criterionVGG(fake_image, real_image) \
                 * self.opt.lambda_vgg
+        G_losses['pixel'] = F.mse_loss(real_image, fake_image, reduction='mean')
 
         return G_losses, fake_image
 
