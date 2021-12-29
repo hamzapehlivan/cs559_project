@@ -20,7 +20,7 @@ This code uses [CelebA-HQ](https://github.com/tkarras/progressive_growing_of_gan
 Once the dataset is prepared, the reconstruction results be got using pretrained models.
 
 
-1. Create `./checkpoints/optim` in the main folder and download the tar of the pretrained models from the [Google Drive Folder](https://drive.google.com/file/d/1UMgKGdVqlulfgOBV4Z0ajEwPdgt3_EDK/view?usp=sharing). Save the tar in `./checkpoints/optim`, then run
+1. Create `./checkpoints/optim` in the main folder and download the pretrained model from the [Google Drive Folder](https://drive.google.com/file/d/1k0m8-QErsDyaMVAOzwjgOlDsEpLhxJDo/view?usp=sharing). Save the file in `./checkpoints/optim`.
 
 
 2. Generate the reconstruction results using the pretrained model.
@@ -28,7 +28,8 @@ Once the dataset is prepared, the reconstruction results be got using pretrained
    python iter.py --name optim --load_size 128 --crop_size 128 --dataset_mode custom --label_dir datasets/CelebA-HQ/test/labels --image_dir datasets/CelebA-HQ/test/images --label_nc 19 --no_instance --batchSize 8 --gpu_ids 3 --iter 0
     ```
 
-Here --iter controls number of iterative optimizations at test time.  
+Here --iter controls number of iterative optimizations at test time. In the paper we used --iter 20. Note that iterative optimization takes
+approximately 4 hours for all evaluation images.  
 
 3. The reconstruction images are saved at `./results/optim/` and the corresponding style codes are stored at `./styles_test/style_codes/`.
 
@@ -39,7 +40,18 @@ To train the new model, you need to specify the option `--dataset_mode custom`, 
 
 
 ```bash
-python train.py --name encoder_finetuning --load_size 128 --crop_size 128 --dataset_mode custom --label_dir datasets/CelebA-HQ/train/labels --image_dir datasets/CelebA-HQ/train/images --label_nc 19 --no_instance --batchSize 12 --gpu_ids 0,1,2,3
+python train.py --name new_experiment --load_size 128 --crop_size 128 --dataset_mode custom --label_dir datasets/CelebA-HQ/train/labels --image_dir datasets/CelebA-HQ/train/images --label_nc 19 --no_instance --batchSize 12 --gpu_ids 0,1,2,3
 ```
 
 This work highly utilizes SEAN repository. 
+
+## Changes to Existing Network
+
+Attention architectures are added to models/networks/attention.py
+New loss function is implemented in models/pix2pix_model.py:179-202
+Attention visualizations are implemented in util/util.py:130-151
+Mask generation code is added to data/pix2pix_dataset.py:112-217
+The repository did not include any evaluation metrics. Therefore, we added SSIM in metrics/ssim.py and PSNR in metrics/psnr.py.
+Iterative optimization is implemented in iter.py
+General changes to network architecture so that it supports masked input together with attention modules.
+General changes to visualization so that we can visualize masks and attentions. 
