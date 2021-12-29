@@ -4,7 +4,9 @@ Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses
 """
 
 import torch
+import torch.nn.functional as F
 import models.networks as networks
+from models.networks import attention
 import util.util as util
 
 
@@ -37,13 +39,13 @@ class Pix2PixModel(torch.nn.Module):
     # of deep networks. We used this approach since DataParallel module
     # can't parallelize custom functions, we branch to different
     # routines based on |mode|.
-    def forward(self, data, mode):
+    def forward(self, data, mode, style_codes=None):
         input_semantics, real_image, valids = self.preprocess_input(data)
 
         if mode == 'generator':
-            g_loss, generated = self.compute_generator_loss(
+            g_loss, generated, attention = self.compute_generator_loss(
                 input_semantics, real_image, valids)
-            return g_loss, generated
+            return g_loss, generated, attention
         elif mode == 'discriminator':
             d_loss = self.compute_discriminator_loss(
                 input_semantics, real_image, valids)
@@ -56,8 +58,11 @@ class Pix2PixModel(torch.nn.Module):
                 # fake_image, _ = self.generate_fake(input_semantics, real_image)
                 obj_dic = data['path']
                 #fake_image = self.save_style_codes(input_semantics, real_image, obj_dic)
-                fake_image = self.netG(input_semantics, real_image, valids, obj_dic=obj_dic)
-            return fake_image
+                fake_image, attention, style_codes = self.netG(input_semantics, real_image, valids, style_codes, obj_dic=obj_dic)
+            return fake_image, attention, style_codes
+        elif mode == 'iter':
+            fake_image, attention, style_codes  = self.netG(input_semantics, real_image, valids, style_codes)
+            return fake_image, attention, style_codes
         elif mode == 'UI_mode':
             with torch.no_grad():
                 # fake_image, _ = self.generate_fake(input_semantics, real_image)
@@ -142,7 +147,7 @@ class Pix2PixModel(torch.nn.Module):
     def compute_generator_loss(self, input_semantics, real_image, valids):
         G_losses = {}
 
-        fake_image = self.generate_fake(
+        fake_image, attention = self.generate_fake(
             input_semantics, real_image, valids, compute_kld_loss=self.opt.use_vae)
 
         final_image = real_image*valids + fake_image*(1-valids)
@@ -166,15 +171,42 @@ class Pix2PixModel(torch.nn.Module):
             G_losses['GAN_Feat'] = GAN_Feat_loss
 
         if not self.opt.no_vgg_loss:
-            G_losses['VGG'] = self.criterionVGG(fake_image*valids, real_image*valids) \
+            G_losses['VGG'] = self.criterionVGG(fake_image, real_image) \
                 * self.opt.lambda_vgg
 
-        return G_losses, fake_image
+        G_losses['pixel'] = 0.5 * torch.mean(torch.abs(real_image -fake_image))
+
+        size_seg= int(attention.shape[2] ** 0.5)
+        segmap = F.interpolate(input_semantics, size=(size_seg,size_seg), mode='nearest')
+        lookup = segmap.view(segmap.shape[0], segmap.shape[1], segmap.shape[2]*segmap.shape[3] ) #Batch x 19 x (64x64) 
+        indices = torch.argmax(segmap, dim=1).view(segmap.shape[0], segmap.shape[2]*segmap.shape[3])
+        # att_sum = torch.zeros(size=(segmap.shape[2]*segmap.shape[3],1), device=torch.cuda.current_device())
+        # for i in range(attention.shape[1]):
+        #     index = indices[:, i]
+        #     att_sum[i,:] = torch.sum(attention[:, i] * lookup[:, index].squeeze(1))
+
+        lookup_matrix = torch.zeros(size=attention.size(), device=attention.device, dtype=attention.dtype)
+        for i in range(0, attention.shape[0]):
+            lookup_matrix[i] = lookup[i, indices[i]]
+        semantic_att = attention * lookup_matrix
+        att_sum = torch.sum(semantic_att, dim=2)
+        att_count = torch.sum(lookup_matrix, dim=2)
+        targets = torch.ones(size=att_sum.size(), device=att_sum.device, dtype=att_sum.dtype) * 5e-4
+        raw_valid = F.interpolate(1-valids, (size_seg, size_seg), mode='nearest').view(targets.size())
+
+        targets = targets *  raw_valid
+        targets = targets * att_count
+      
+    
+        att_loss = torch.sum(torch.abs( att_sum - targets)) / ( torch.sum(raw_valid, dim=1)+ 1e-7)
+        G_losses['att_loss'] = 0.1 * att_loss.mean()
+
+        return G_losses, fake_image, attention
 
     def compute_discriminator_loss(self, input_semantics, real_image, valids):
         D_losses = {}
         with torch.no_grad():
-            fake_image = self.generate_fake(input_semantics, real_image, valids)
+            fake_image,_ = self.generate_fake(input_semantics, real_image, valids)
             # fake_image = fake_image.detach()
             # fake_image.requires_grad_()
             final_image = real_image * valids + fake_image*(1-valids)
@@ -199,10 +231,10 @@ class Pix2PixModel(torch.nn.Module):
     def generate_fake(self, input_semantics, real_image, valids, compute_kld_loss=False):
 
 
-        fake_image  = self.netG(input_semantics, real_image, valids)
+        fake_image, attention  = self.netG(input_semantics, real_image, valids)
 
 
-        return fake_image
+        return fake_image, attention
 
 ###############################################################
 

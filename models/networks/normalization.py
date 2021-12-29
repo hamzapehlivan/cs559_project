@@ -160,19 +160,19 @@ class ACE(nn.Module):
                             middle_avg[i].masked_scatter_(segmap.bool()[i, j], component_mu)
 
 
-                            if self.status == 'test' and self.save_npy and self.ACE_Name=='up_2_ACE_0':
-                                tmp = style_codes[i][j].cpu().numpy()
-                                dir_path = 'styles_test'
+                            # if self.status == 'test' and self.save_npy and self.ACE_Name=='up_2_ACE_0':
+                            #     tmp = style_codes[i][j].cpu().numpy()
+                            #     dir_path = 'styles_test'
 
-                                ############### some problem with obj_dic[i]
+                            #     ############### some problem with obj_dic[i]
 
-                                im_name = os.path.basename(obj_dic[i])
-                                folder_path = os.path.join(dir_path, 'style_codes', im_name, str(j))
-                                if not os.path.exists(folder_path):
-                                    os.makedirs(folder_path)
+                            #     im_name = os.path.basename(obj_dic[i])
+                            #     folder_path = os.path.join(dir_path, 'style_codes', im_name, str(j))
+                            #     if not os.path.exists(folder_path):
+                            #         os.makedirs(folder_path)
 
-                                style_code_path = os.path.join(folder_path, 'ACE.npy')
-                                np.save(style_code_path, tmp)
+                            #     style_code_path = os.path.join(folder_path, 'ACE.npy')
+                            #     np.save(style_code_path, tmp)
 
 
             gamma_avg = self.conv_gamma(middle_avg)

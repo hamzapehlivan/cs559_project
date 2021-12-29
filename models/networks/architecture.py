@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import torchvision
 import torch.nn.utils.spectral_norm as spectral_norm
 from models.networks.normalization import SPADE, ACE
-from models.networks.attention import Self_Attention
+from models.networks.attention import Self_Attention, Contextual_Attention
 
 # ResNet block that uses SPADE.
 # It differs from the ResNet block of pix2pixHD in that
@@ -177,8 +177,11 @@ class Zencoder(torch.nn.Module):
             model += [nn.ConvTranspose2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1, output_padding=1),
                        norm_layer(int(ngf * mult / 2)), nn.LeakyReLU(0.2, False)]#, Self_Attention(out_dim)]
 
-        model += [nn.ReflectionPad2d(1), nn.Conv2d(256, output_nc, kernel_size=3, padding=0), nn.Tanh()]
+        self.attention = Contextual_Attention(out_dim)
+
+        model_last = [nn.ReflectionPad2d(1), nn.Conv2d(256, output_nc, kernel_size=3, padding=0), nn.Tanh()]
         self.model = nn.Sequential(*model)
+        self.model_last = nn.Sequential(*model_last)
 
 
     def forward(self, input, segmap, valids):
@@ -186,7 +189,9 @@ class Zencoder(torch.nn.Module):
         input = input*valids
         input = torch.cat((input, valids), 1)
 
-        codes = self.model(input)
+        latents = self.model(input)
+        out, attention = self.attention(latents, valids)
+        codes = self.model_last(out)
 
         segmap = F.interpolate(segmap, size=codes.size()[2:], mode='nearest')
 
@@ -213,5 +218,7 @@ class Zencoder(torch.nn.Module):
                     codes_vector[i][j] = codes_component_feature
 
                     # codes_avg[i].masked_scatter_(segmap.bool()[i, j], codes_component_mu)
+        
 
-        return codes_vector
+
+        return codes_vector, attention

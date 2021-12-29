@@ -130,6 +130,8 @@ class Visualizer():
             tile = self.opt.batchSize > 8
             if 'input_label' == key:
                 t = util.tensor2label(t, self.opt.label_nc + 2, tile=tile)
+            elif 'attention' == key:
+                t = util.tensor2att(t[0], t[1], t[2])
             else:
                 t = util.tensor2im(t, tile=tile)
             visuals[key] = t

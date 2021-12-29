@@ -163,7 +163,7 @@ class Pix2pixDataset(BaseDataset):
             mask = np.flip(mask, 1)
         return mask
 
-    def RandomMask(self, s, hole_range=[0.0,0.2]):
+    def RandomMask(self, s, hole_range=[0.01,0.2]):
         coef = min(hole_range[0] + hole_range[1], 1.0)
         while True:
             mask = np.ones((s, s), np.uint8)

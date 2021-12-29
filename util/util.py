@@ -14,6 +14,8 @@ import argparse
 import dill as pickle
 import util.coco
 
+import cv2
+
 
 def save_obj(obj, name):
     with open(name, 'wb') as f:
@@ -125,6 +127,29 @@ def tensor2label(label_tensor, n_label, imtype=np.uint8, tile=False):
     return result
 
 
+def tensor2att(attention, index, real_idx):
+    attention = attention.detach().cpu().numpy()
+    attention_shape = 64
+
+    
+    attention = attention[index] *5000
+    
+    attention = np.clip(attention, 0.0, 1.0)
+
+    #Convert probabilities into 0-255
+    attention = (attention *255).astype(np.uint8)
+    attention = np.reshape(attention, (attention_shape, attention_shape))
+    heat_map = cv2.applyColorMap(attention, cv2.COLORMAP_JET)
+
+    #Visualize the selected pixel
+    center_x = real_idx %  attention_shape
+    center_y = real_idx // attention_shape
+    center = (center_x, center_y)
+    cv2.circle(heat_map, center=center, radius=2, color=(0,0,0), thickness=-1, lineType=8, shift=0)
+    heat_map = cv2.cvtColor(heat_map, cv2.COLOR_BGR2RGB)
+
+    return heat_map
+
 def save_image(image_numpy, image_path, create_dir=False):
     if create_dir:
         os.makedirs(os.path.dirname(image_path), exist_ok=True)
@@ -201,16 +226,23 @@ def save_network(net, label, epoch, opt):
 
 
 def load_network(net, label, epoch, opt):
-    save_filename = '%s_net_%s.pth' % (epoch, label)
-    save_dir = os.path.join(opt.checkpoints_dir, opt.name)
-    save_path = os.path.join(save_dir, save_filename)
-    weights = torch.load(save_path)
-    print(f'weights are loaded from {save_path} for {label}')
-    if label == 'G':
-        weights.pop('Zencoder.model.1.weight') # original 3 channel but our is 4 channel
-        net.load_state_dict(weights, strict=False)
+    if (opt.pretrained == True):
+        save_filename = f'pretrained_{label}.pth'#'%s_net_%s.pth' % (epoch, label)
+        weights = torch.load(save_filename) # torch.load(save_path)
+        print(f'weights are loaded from {save_filename} for {label}')
+        if label == 'G':
+            weights.pop('Zencoder.model.1.weight') # original 3 channel but our is 4 channel
+            net.load_state_dict(weights, strict=False)
+        else:
+            net.load_state_dict(weights)
     else:
+        save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        save_filename = f'%s_net_%s.pth' % (epoch, label)
+        save_path = os.path.join(save_dir, save_filename)
+        weights = torch.load(save_path) # torch.load(save_path)
         net.load_state_dict(weights)
+        print(f'weights are loaded from {save_filename} for {label}')
+    
     return net
 
 

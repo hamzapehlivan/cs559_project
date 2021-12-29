@@ -72,13 +72,15 @@ class SPADEGenerator(BaseNetwork):
 
         return sw, sh
 
-    def forward(self, input, rgb_img, valids,  obj_dic=None):
+    def forward(self, input, rgb_img, valids, style_codes=None, obj_dic=None):
         seg = input
 
         x = F.interpolate(seg, size=(self.sh, self.sw))
         x = self.fc(x)
 
-        style_codes = self.Zencoder(input=rgb_img, segmap=seg, valids = valids)
+        attention = None
+        if (style_codes == None):
+            style_codes, attention = self.Zencoder(input=rgb_img, segmap=seg, valids = valids)
 
 
         x = self.head_0(x, seg, style_codes, obj_dic=obj_dic)
@@ -107,7 +109,7 @@ class SPADEGenerator(BaseNetwork):
 
         x = self.conv_img(F.leaky_relu(x, 2e-1))
         x = F.tanh(x)
-        return x
+        return x, attention, style_codes
 
 
 # class Pix2PixHDGenerator(BaseNetwork):

@@ -5,6 +5,8 @@ Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses
 
 import sys
 from collections import OrderedDict
+
+import torch
 from options.train_options import TrainOptions
 import data
 from util.iter_counter import IterationCounter
@@ -40,7 +42,6 @@ for epoch in iter_counter.training_epochs():
     iter_counter.record_epoch_start(epoch)
     for i, data_i in enumerate(dataloader, start=iter_counter.epoch_iter):
         iter_counter.record_one_iteration()
-
         # Training
         # train generator
         if i % opt.D_steps_per_G == 0:
@@ -63,7 +64,7 @@ for epoch in iter_counter.training_epochs():
                                    ('real_image', data_i['image']),
                                    ('masked', masked_image),
                                    ('fake', trainer.get_latest_generated()),
-                                   ('final', final_image)])
+                                   ('final', final_image) ])
             visualizer.display_current_results(visuals, epoch, iter_counter.total_steps_so_far)
 
         if iter_counter.needs_saving():
