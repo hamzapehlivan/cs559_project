@@ -19,6 +19,7 @@ class TestOptions(BaseOptions):
         parser.set_defaults(phase='test')
 
         parser.add_argument('--status', type=str, default='test')
+        parser.add_argument('--iter', type=int, default=0)
 
         self.isTrain = False
         return parser

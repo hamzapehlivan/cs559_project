@@ -3,6 +3,7 @@ Copyright (C) 2019 NVIDIA Corporation.  All rights reserved.
 Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
 """
 
+from models.networks import attention
 from models.networks.sync_batchnorm import DataParallelWithCallback
 from models.pix2pix_model import Pix2PixModel
 import torch.nn as nn
@@ -38,12 +39,13 @@ class Pix2PixTrainer():
 
     def run_generator_one_step(self, data):
         self.optimizer_G.zero_grad()
-        g_losses, generated = self.pix2pix_model(data, mode='generator')
+        g_losses, generated, attention = self.pix2pix_model(data, mode='generator')
         g_loss = sum(g_losses.values()).mean()
         g_loss.backward()
         self.optimizer_G.step()
         self.g_losses = g_losses
         self.generated = generated
+        self.attention = attention
 
     def run_discriminator_one_step(self, data):
         self.optimizer_D.zero_grad()
@@ -58,6 +60,9 @@ class Pix2PixTrainer():
 
     def get_latest_generated(self):
         return self.generated
+    
+    def get_latest_attention(self):
+        return self.attention
 
     def update_learning_rate(self, epoch):
         self.update_learning_rate(epoch)

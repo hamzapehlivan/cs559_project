@@ -41,7 +41,7 @@ class Self_Attention(nn.Module):
 
         valid_attention = attention * valid # B x N x N 
         attention_sums = torch.sum(valid_attention, dim=2) # B x N
-        attention_scale = 1 / attention_sums # B x N
+        attention_scale = (1 / attention_sums).unsqueeze(2) # B x N x 1
         scaled_attention = valid_attention * attention_scale
 
         proj_value = self.value_conv(x).view(m_batchsize,-1,width*height) # B X C X N
@@ -52,3 +52,55 @@ class Self_Attention(nn.Module):
         
         out = self.gamma*out + x
         return out,scaled_attention
+
+class Contextual_Attention(nn.Module):
+    """ Self attention Layer"""
+    def __init__(self,in_dim):
+        super(Contextual_Attention,self).__init__()
+        self.chanel_in = in_dim
+        
+        self.query_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim//8 , kernel_size= 1)
+        self.key_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim//8 , kernel_size= 1)
+        self.value_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim , kernel_size= 1)
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+        self.softmax  = nn.Softmax(dim=-1) #
+        
+    def forward(self,x, valid):
+        """
+            inputs :
+                x : input feature maps( B X C X W X H)
+            returns :
+                out : self attention value + input feature 
+                attention: B X N X N (N is Width*Height)
+        """
+        
+        m_batchsize,C,width ,height = x.size()
+        valid = F.interpolate(valid, (width,height), mode='nearest')
+        #valid = valid.view(m_batchsize, 1, width*height)
+
+        proj_query  = self.query_conv(x).view(m_batchsize,-1,width*height).permute(0,2,1) # B X CX(N)
+        proj_key =  self.key_conv(x).view(m_batchsize,-1,width*height) # B X C x (*W*H)
+
+        energy =  torch.bmm(proj_query,proj_key) # transpose check
+        
+        attention = self.softmax(energy) # BX (N) X (N) 
+        
+        # (Masking attention weights of masked pixels, because we don't want to use them for constructing out)
+        valid_attention = attention * valid.view(m_batchsize, 1, width*height) # B x N x N = B x N x N * B x 1 x N 
+        # Make it scaled
+        attention_sums = torch.sum(valid_attention, dim=2) # B x N
+        attention_scale = (1 / attention_sums).unsqueeze(2)# B x N x 1
+        
+        scaled_attention = valid_attention * attention_scale
+        # Set all attention weights of valid pixels to 0, because we want construct valid pixels as 0 in out
+        contextual_attention = scaled_attention * (1-valid).view(m_batchsize, width*height, 1) # B x N x N = B x N x N * B x N x 1
+
+        proj_value = self.value_conv(x).view(m_batchsize,-1,width*height) # B X C X N
+
+
+        out = torch.bmm(proj_value,contextual_attention.permute(0,2,1) )
+        out = out.view(m_batchsize,C,width,height)
+        
+        out = self.gamma*out + x
+        return out,contextual_attention

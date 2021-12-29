@@ -14,6 +14,8 @@ import argparse
 import dill as pickle
 import util.coco
 
+import cv2
+
 
 def save_obj(obj, name):
     with open(name, 'wb') as f:
@@ -124,6 +126,29 @@ def tensor2label(label_tensor, n_label, imtype=np.uint8, tile=False):
     result = label_numpy.astype(imtype)
     return result
 
+
+def tensor2att(attention, index, real_idx):
+    attention = attention.detach().cpu().numpy()
+    attention_shape = 64
+
+    
+    attention = attention[index] *5000
+    
+    attention = np.clip(attention, 0.0, 1.0)
+
+    #Convert probabilities into 0-255
+    attention = (attention *255).astype(np.uint8)
+    attention = np.reshape(attention, (attention_shape, attention_shape))
+    heat_map = cv2.applyColorMap(attention, cv2.COLORMAP_JET)
+
+    #Visualize the selected pixel
+    center_x = real_idx %  attention_shape
+    center_y = real_idx // attention_shape
+    center = (center_x, center_y)
+    cv2.circle(heat_map, center=center, radius=2, color=(0,0,0), thickness=-1, lineType=8, shift=0)
+    heat_map = cv2.cvtColor(heat_map, cv2.COLOR_BGR2RGB)
+
+    return heat_map
 
 def save_image(image_numpy, image_path, create_dir=False):
     if create_dir:
