@@ -47,11 +47,11 @@ This work highly utilizes SEAN repository.
 
 ## Changes to Existing Network
 
-Attention architectures are added to models/networks/attention.py 
-New loss function is implemented in models/pix2pix_model.py:179-202 
-Attention visualizations are implemented in util/util.py:130-151 
-Mask generation code is added to data/pix2pix_dataset.py:112-217 
-The repository did not include any evaluation metrics. Therefore, we added SSIM in metrics/ssim.py and PSNR in metrics/psnr.py. 
-Iterative optimization is implemented in iter.py 
-General changes to network architecture so that it supports masked input together with attention modules. 
+Attention architectures are added to models/networks/attention.py \
+New loss function is implemented in models/pix2pix_model.py:179-202 \
+Attention visualizations are implemented in util/util.py:130-151 \
+Mask generation code is added to data/pix2pix_dataset.py:112-217 \
+The repository did not include any evaluation metrics. Therefore, we added SSIM in metrics/ssim.py and PSNR in metrics/psnr.py. \
+Iterative optimization is implemented in iter.py \
+General changes to network architecture so that it supports masked input together with attention modules. \
 General changes to visualization so that we can visualize masks and attentions.  
